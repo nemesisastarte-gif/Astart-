@@ -13,49 +13,53 @@ const __dirname = path.dirname(__filename);
 const db = new Database("astarte.db");
 
 // Initialize Database
-db.exec(`
-  CREATE TABLE IF NOT EXISTS polaris_keys (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    key_name TEXT NOT NULL,
-    encrypted_key TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-`);
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS polaris_keys (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      key_name TEXT NOT NULL,
+      encrypted_key TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
 
-// Migration: Add missing columns if they don't exist
-const tableInfo = db.prepare("PRAGMA table_info(polaris_keys)").all();
-const columns = tableInfo.map((col: any) => col.name);
+  // Migration: Add missing columns if they don't exist
+  const tableInfo = db.prepare("PRAGMA table_info(polaris_keys)").all();
+  const columns = tableInfo.map((col: any) => col.name);
 
-if (!columns.includes('usage_count')) {
-  db.exec("ALTER TABLE polaris_keys ADD COLUMN usage_count INTEGER DEFAULT 0");
+  if (!columns.includes('usage_count')) {
+    db.exec("ALTER TABLE polaris_keys ADD COLUMN usage_count INTEGER DEFAULT 0");
+  }
+  if (!columns.includes('max_usage')) {
+    db.exec("ALTER TABLE polaris_keys ADD COLUMN max_usage INTEGER DEFAULT 1000");
+  }
+  if (!columns.includes('is_active')) {
+    db.exec("ALTER TABLE polaris_keys ADD COLUMN is_active BOOLEAN DEFAULT 1");
+  }
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS chat_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_email TEXT,
+      question TEXT NOT NULL,
+      answer TEXT NOT NULL,
+      category TEXT,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    );
+
+    INSERT OR IGNORE INTO app_settings (key, value) VALUES ('robot_mode', 'balanced');
+    INSERT OR IGNORE INTO app_settings (key, value) VALUES ('admin_password', 'Capitaine');
+    // Force update the sheet ID to the one provided by the user
+    INSERT OR REPLACE INTO app_settings (key, value) VALUES ('google_sheet_id', '1fg-tStXc8E04WLqkHxDfrEJR7yf6ix0uzL4y52HF0k0');
+  `);
+} catch (err) {
+  console.error("Database initialization error:", err);
 }
-if (!columns.includes('max_usage')) {
-  db.exec("ALTER TABLE polaris_keys ADD COLUMN max_usage INTEGER DEFAULT 1000");
-}
-if (!columns.includes('is_active')) {
-  db.exec("ALTER TABLE polaris_keys ADD COLUMN is_active BOOLEAN DEFAULT 1");
-}
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS chat_history (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_email TEXT,
-    question TEXT NOT NULL,
-    answer TEXT NOT NULL,
-    category TEXT,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS app_settings (
-    key TEXT PRIMARY KEY,
-    value TEXT
-  );
-
-  INSERT OR IGNORE INTO app_settings (key, value) VALUES ('robot_mode', 'balanced');
-  INSERT OR IGNORE INTO app_settings (key, value) VALUES ('admin_password', 'Capitaine');
-  // Force update the sheet ID to the one provided by the user
-  INSERT OR REPLACE INTO app_settings (key, value) VALUES ('google_sheet_id', '1fg-tStXc8E04WLqkHxDfrEJR7yf6ix0uzL4y52HF0k0');
-`);
 
 async function startServer() {
   const app = express();
@@ -133,7 +137,7 @@ async function startServer() {
         return res.json([]);
       }
       
-      const response = await fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/pub?output=csv`);
+      const response = await fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`);
       const csvData = await response.text();
       
       // Basic CSV parsing (assuming simple structure: Category, SubCategory, FileName, FileLink)
