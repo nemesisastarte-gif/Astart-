@@ -1,23 +1,69 @@
 @import "tailwindcss";
+@import "katex/dist/katex.min.css";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
-  --color-brand-primary: #1a1a1a;
-  --color-brand-accent: #f27d26;
+  --color-brand-primary: #020617;
+  --color-brand-accent: #00d4ff;
+  --color-brand-secondary: #3b82f6;
+  --color-brand-text: #e2e8f0;
 }
 
 @layer base {
   body {
-    @apply bg-[#f8f9fa] text-gray-900 antialiased;
+    @apply bg-[#020617] text-[#e2e8f0] antialiased min-h-screen;
+    background-image: 
+      radial-gradient(circle at 20% 30%, rgba(0, 212, 255, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 80% 70%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
   }
 }
 
+.markdown-body {
+  @apply text-sm leading-relaxed;
+}
+
+.markdown-body p {
+  @apply mb-2 last:mb-0;
+}
+
+.markdown-body strong {
+  @apply font-bold text-white;
+}
+
+.markdown-body em {
+  @apply italic;
+}
+
+.markdown-body ul, .markdown-body ol {
+  @apply ml-4 mb-2;
+}
+
+.markdown-body ul {
+  @apply list-disc;
+}
+
+.markdown-body ol {
+  @apply list-decimal;
+}
+
+.markdown-body code {
+  @apply bg-white/10 px-1 rounded font-mono text-xs;
+}
+
 .glass-panel {
-  @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-xl;
+  @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl;
 }
 
 .admin-input {
-  @apply w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-accent/50 transition-all;
+  @apply w-full px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-brand-accent/50 transition-all;
+}
+
+.stellar-glow {
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+}
+
+.stellar-text-glow {
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
 }

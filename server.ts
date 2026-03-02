@@ -140,12 +140,16 @@ async function startServer() {
       const response = await fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`);
       const csvData = await response.text();
       
-      // Basic CSV parsing (assuming simple structure: Category, SubCategory, FileName, FileLink)
+      // Basic CSV parsing (assuming structure: Category, SubCategory, Class, FileName, FileLink)
       const lines = csvData.split('\n');
-      const result = lines.slice(1).map(line => {
-        const [category, subCategory, fileName, fileLink] = line.split(',').map(s => s.trim());
-        return { category, subCategory, fileName, fileLink };
-      }).filter(item => item.category && item.fileName);
+      const result = lines.slice(1)
+        .map(line => {
+          const columns = line.split(',').map(s => s.trim());
+          if (columns.length < 4) return null; // Skip invalid lines
+          const [category, subCategory, className, fileName, fileLink] = columns;
+          return { category, subCategory, class: className, fileName, fileLink };
+        })
+        .filter((item): item is any => item !== null && !!item.category && !!item.fileName);
 
       res.json(result);
     } catch (error) {

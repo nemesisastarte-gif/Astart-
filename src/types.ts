@@ -8,6 +8,7 @@ export interface PolarisKey {
 export interface SheetRow {
   category: string;
   subCategory: string;
+  class: string;
   fileName: string;
   fileLink: string;
 }

@@ -5,10 +5,13 @@ import { cn } from '@/src/lib/utils';
 import { ChatMessage, SheetRow } from '@/src/types';
 import { motion, AnimatePresence } from 'motion/react';
 import CryptoJS from 'crypto-js';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 
 export default function ChatInterface() {
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'assistant', content: 'Bonjour ! Je suis ton assistant magique. Comment puis-je t\'aider aujourd\'hui ?' }
+    { role: 'assistant', content: 'Bonjour ! Je suis Polaris brain, ton assistant pédagogique futuriste. Comment puis-je t\'aider dans tes cours aujourd\'hui ? N\'hésite pas à consulter les fichiers PDF de la bibliothèque !' }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -60,10 +63,10 @@ export default function ChatInterface() {
         } else {
           // Fallback to mock data if sheet is empty or not configured
           setKnowledge([
-            { category: 'Maths', subCategory: 'Addition', fileName: 'Les bases de l\'addition', fileLink: '#' },
-            { category: 'Maths', subCategory: 'Soustraction', fileName: 'Soustraire des nombres', fileLink: '#' },
-            { category: 'Français', subCategory: 'Conjugaison', fileName: 'Le présent de l\'indicatif', fileLink: '#' },
-            { category: 'Sciences', subCategory: 'Plantes', fileName: 'Comment poussent les fleurs', fileLink: '#' },
+            { category: 'Maths', subCategory: 'Addition', class: '6ème', fileName: 'Les bases de l\'addition', fileLink: '#' },
+            { category: 'Maths', subCategory: 'Soustraction', class: '6ème', fileName: 'Soustraire des nombres', fileLink: '#' },
+            { category: 'Français', subCategory: 'Conjugaison', class: '5ème', fileName: 'Le présent de l\'indicatif', fileLink: '#' },
+            { category: 'Sciences', subCategory: 'Plantes', class: '4ème', fileName: 'Comment poussent les fleurs', fileLink: '#' },
           ]);
         }
       } catch (err) {
@@ -89,11 +92,30 @@ export default function ChatInterface() {
 
     try {
       const ai = new GoogleGenAI({ apiKey });
+      
+      // Prepare knowledge context for the AI
+      const knowledgeContext = knowledge.map(k => 
+        `- Document: "${k.fileName}" | Catégorie: ${k.category} | Sous-catégorie: ${k.subCategory} | Classe: ${k.class} | Lien: ${k.fileLink}`
+      ).join('\n');
+
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: userMessage,
         config: {
-          systemInstruction: "Tu es un assistant pédagogique bienveillant pour des enfants. Réponds simplement et clairement. Si la question porte sur un sujet scolaire, essaie de voir si tu peux mentionner des catégories comme Maths, Français ou Sciences."
+          systemInstruction: `Tu es Polaris brain, l'assistant pédagogique du site SuccessPolaris, créé par le Lion d'Astarté connu sous le symbole de TSEK. Ton style est futuriste, poli et motivant. 
+          
+          Tu as accès à une bibliothèque de documents ci-dessous. Lorsqu'un élève te pose une question sur un cours ou cherche un document, tu DOIS lui indiquer avec précision sa Catégorie, sa Sous-catégorie et sa Classe, puis lui donner le lien direct.
+          
+          FORMATAGE :
+          - Utilise le **gras** pour les termes importants.
+          - Utilise des listes à puces pour structurer tes explications.
+          - Pour les mathématiques, utilise impérativement le format LaTeX entre $ pour les formules en ligne (ex: $E=mc^2$) et entre $$ pour les formules centrées.
+          
+          BIBLIOTHÈQUE DISPONIBLE :
+          ${knowledgeContext}
+          
+          Si on te demande qui tu es ou quelle est ton identité, réponds impérativement : 'Je suis Polaris brain crée par le Lion d'Astarté connu sous le symbole de TSEK'. 
+          Réponds toujours de manière bienveillante, simple et claire pour aider les élèves.`
         }
       });
 
@@ -131,23 +153,23 @@ export default function ChatInterface() {
   );
 
   return (
-    <div className="flex h-screen bg-[#f8f9fa]">
+    <div className="flex h-screen bg-brand-primary text-brand-text">
       {/* Sidebar - Knowledge Base */}
-      <div className="w-80 border-r border-gray-200 bg-white flex flex-col hidden md:flex">
-        <div className="p-6 border-bottom border-gray-100">
+      <div className="w-80 border-r border-white/10 bg-white/5 backdrop-blur-xl flex flex-col hidden md:flex">
+        <div className="p-6 border-b border-white/5">
           <div className="flex items-center gap-2 mb-6">
-            <div className="w-8 h-8 bg-brand-accent rounded-lg flex items-center justify-center">
-              <BookOpen className="text-white w-5 h-5" />
+            <div className="w-8 h-8 bg-brand-accent rounded-lg flex items-center justify-center stellar-glow">
+              <BookOpen className="text-brand-primary w-5 h-5" />
             </div>
-            <h2 className="font-bold text-lg">Bibliothèque</h2>
+            <h2 className="font-bold text-lg stellar-text-glow">Bibliothèque</h2>
           </div>
           
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 w-4 h-4" />
             <input 
               type="text" 
               placeholder="Rechercher un document..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-brand-accent/20"
+              className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-brand-accent/50 outline-none text-white"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -157,12 +179,18 @@ export default function ChatInterface() {
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
           {['Maths', 'Français', 'Sciences'].map(cat => (
             <div key={cat}>
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-2">{cat}</h3>
+              <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3 px-2">{cat}</h3>
               <div className="space-y-1">
                 {filteredKnowledge.filter(k => k.category === cat).map((item, idx) => (
-                  <button key={idx} className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 group transition-colors flex items-center justify-between">
-                    <span className="text-sm text-gray-600 group-hover:text-brand-accent truncate">{item.fileName}</span>
-                    <ChevronRight className="w-3 h-3 text-gray-300 group-hover:text-brand-accent" />
+                  <button key={idx} className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 group transition-colors flex flex-col gap-1">
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-sm text-zinc-400 group-hover:text-brand-accent truncate">{item.fileName}</span>
+                      <ChevronRight className="w-3 h-3 text-zinc-600 group-hover:text-brand-accent" />
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-[9px] bg-white/5 px-1.5 py-0.5 rounded text-zinc-500 uppercase tracking-widest">{item.class}</span>
+                      <span className="text-[9px] bg-brand-accent/5 px-1.5 py-0.5 rounded text-brand-accent/60 uppercase tracking-widest">{item.subCategory}</span>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -172,16 +200,20 @@ export default function ChatInterface() {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col relative">
-        <header className="h-16 border-b border-gray-100 bg-white/80 backdrop-blur-md flex items-center justify-between px-8 sticky top-0 z-10">
+      <div className="flex-1 flex flex-col relative overflow-hidden">
+        {/* Background Glows */}
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand-accent/5 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-brand-secondary/5 blur-[120px] rounded-full pointer-events-none" />
+
+        <header className="h-16 border-b border-white/5 bg-brand-primary/80 backdrop-blur-md flex items-center justify-between px-8 sticky top-0 z-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center">
-              <Bot className="text-white w-6 h-6" />
+            <div className="w-10 h-10 bg-brand-accent/20 border border-brand-accent/30 rounded-full flex items-center justify-center stellar-glow">
+              <Bot className="text-brand-accent w-6 h-6" />
             </div>
             <div>
-              <h1 className="font-bold text-sm">Astarté AI</h1>
-              <p className="text-[10px] text-green-500 font-medium uppercase tracking-widest flex items-center gap-1">
-                <span className="w-1 h-1 bg-green-500 rounded-full animate-pulse" />
+              <h1 className="font-bold text-sm text-white">Polaris Brain</h1>
+              <p className="text-[10px] text-brand-accent font-medium uppercase tracking-widest flex items-center gap-1">
+                <span className="w-1 h-1 bg-brand-accent rounded-full animate-pulse" />
                 En ligne
               </p>
             </div>
@@ -189,27 +221,27 @@ export default function ChatInterface() {
         </header>
 
         {!apiKey && !isConfiguring && (
-          <div className="absolute inset-0 z-20 bg-white/60 backdrop-blur-sm flex items-center justify-center p-8">
+          <div className="absolute inset-0 z-20 bg-brand-primary/60 backdrop-blur-sm flex items-center justify-center p-8">
             <motion.div 
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-white border border-gray-200 p-10 rounded-[2.5rem] shadow-2xl max-w-md text-center"
+              className="bg-zinc-900 border border-white/10 p-10 rounded-[2.5rem] shadow-2xl max-w-md text-center glass-panel"
             >
-              <div className="w-20 h-20 bg-amber-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                <AlertTriangle className="text-amber-600 w-10 h-10" />
+              <div className="w-20 h-20 bg-amber-500/10 border border-amber-500/20 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                <AlertTriangle className="text-amber-500 w-10 h-10" />
               </div>
-              <h2 className="text-2xl font-black mb-4">IA Non Connectée</h2>
-              <p className="text-gray-500 text-sm leading-relaxed mb-8">
+              <h2 className="text-2xl font-black mb-4 text-white">IA Non Connectée</h2>
+              <p className="text-zinc-400 text-sm leading-relaxed mb-8">
                 Pour que le robot puisse répondre, tu dois d'abord insérer une clé magique (API Key) dans la page d'administration.
               </p>
               <div className="flex flex-col gap-3">
                 <button 
                   onClick={() => window.location.reload()}
-                  className="bg-black text-white font-bold px-8 py-3 rounded-xl hover:bg-brand-accent transition-all"
+                  className="bg-brand-accent text-brand-primary font-bold px-8 py-3 rounded-xl hover:bg-white transition-all stellar-glow"
                 >
                   Vérifier à nouveau
                 </button>
-                <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest justify-center mb-2">
+                <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-500 uppercase tracking-widest justify-center mb-2">
                   <Settings className="w-3 h-3" />
                   Utilise le bouton en bas à droite
                 </div>
@@ -231,42 +263,49 @@ export default function ChatInterface() {
                 )}
               >
                 <div className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-                  msg.role === 'user' ? "bg-brand-accent" : "bg-black"
+                  "w-8 h-8 rounded-full flex items-center justify-center shrink-0 border",
+                  msg.role === 'user' ? "bg-brand-accent border-brand-accent/30 stellar-glow" : "bg-white/10 border-white/10"
                 )}>
-                  {msg.role === 'user' ? <User className="text-white w-4 h-4" /> : <Bot className="text-white w-4 h-4" />}
+                  {msg.role === 'user' ? <User className="text-brand-primary w-4 h-4" /> : <Bot className="text-brand-accent w-4 h-4" />}
                 </div>
                 <div className={cn(
                   "px-5 py-3 rounded-2xl text-sm leading-relaxed shadow-sm",
                   msg.role === 'user' 
-                    ? "bg-brand-accent text-white rounded-tr-none" 
-                    : "bg-white border border-gray-100 rounded-tl-none text-gray-700"
+                    ? "bg-brand-accent text-brand-primary font-medium rounded-tr-none" 
+                    : "bg-white/5 border border-white/10 rounded-tl-none text-zinc-300 backdrop-blur-sm"
                 )}>
-                  {msg.content}
+                  <div className="markdown-body">
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkMath]} 
+                      rehypePlugins={[rehypeKatex]}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               </motion.div>
             ))}
           </AnimatePresence>
           {isLoading && (
             <div className="flex gap-4 max-w-3xl mr-auto">
-              <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center shrink-0">
-                <Bot className="text-white w-4 h-4" />
+              <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center shrink-0">
+                <Bot className="text-brand-accent w-4 h-4" />
               </div>
-              <div className="px-5 py-3 rounded-2xl bg-white border border-gray-100 rounded-tl-none flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                <span className="text-sm text-gray-400">Le robot réfléchit...</span>
+              <div className="px-5 py-3 rounded-2xl bg-white/5 border border-white/10 rounded-tl-none flex items-center gap-2 backdrop-blur-sm">
+                <Loader2 className="w-4 h-4 animate-spin text-brand-accent" />
+                <span className="text-sm text-zinc-500">Le robot réfléchit...</span>
               </div>
             </div>
           )}
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="p-8 bg-gradient-to-t from-[#f8f9fa] via-[#f8f9fa] to-transparent">
+        <div className="p-8 bg-gradient-to-t from-brand-primary via-brand-primary to-transparent">
           <div className="max-w-3xl mx-auto relative">
             <input
               type="text"
               placeholder="Pose ta question ici..."
-              className="w-full pl-6 pr-16 py-4 bg-white border border-gray-200 rounded-2xl shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-accent/20 transition-all"
+              className="w-full pl-6 pr-16 py-4 bg-white/5 border border-white/10 rounded-2xl shadow-2xl focus:outline-none focus:ring-2 focus:ring-brand-accent/30 transition-all text-white placeholder:text-zinc-600 backdrop-blur-xl"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
@@ -274,13 +313,13 @@ export default function ChatInterface() {
             <button
               onClick={handleSend}
               disabled={isLoading || !input.trim()}
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black text-white rounded-xl flex items-center justify-center hover:bg-brand-accent transition-colors disabled:opacity-50 disabled:hover:bg-black"
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-brand-accent text-brand-primary rounded-xl flex items-center justify-center hover:bg-white transition-all disabled:opacity-50 stellar-glow"
             >
               <Send className="w-5 h-5" />
             </button>
           </div>
-          <p className="text-center text-[10px] text-gray-400 mt-4">
-            Astarté AI peut faire des erreurs. Vérifie les informations importantes.
+          <p className="text-center text-[10px] text-zinc-600 mt-4 uppercase tracking-widest font-bold">
+            Astarté AI • SuccessPolaris Astral Palace
           </p>
         </div>
       </div>
